@@ -38,7 +38,9 @@ let models: Models | null = null;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const withChips = (s: string) => esc(s).replace(/\[[A-Z]+_\d+(?:_FIRST)?\]/g, (p) => `<span class="ph">${p}</span>`);
 const thread = () => S.threads.find((t) => t.id === S.current)!;
-const threadText = (t: Thread) => t.messages.map((m) => `From: ${m.from}\nSent: ${m.at}\n${m.body}`).join('\n\n---\n\n');
+// A pasted thread already carries its own From:/Sent: lines; do not add a second header.
+const threadText = (t: Thread) =>
+  t.channel === 'Pasted' ? t.messages.map((m) => m.body).join('\n\n---\n\n') : t.messages.map((m) => `From: ${m.from}\nSent: ${m.at}\n${m.body}`).join('\n\n---\n\n');
 const deviceReady = () => S.device === 'available';
 
 function deviceChip(): string {

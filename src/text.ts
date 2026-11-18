@@ -23,6 +23,7 @@ export function parsePasted(text: string): { from: string; subject: string } {
 /** Remove markdown marks so a plain-text box (the draft) never shows "**" or "# ". */
 export function stripMd(s: string): string {
   return s
+    .trim()
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
@@ -32,7 +33,9 @@ export function stripMd(s: string): string {
 /** Escaped HTML with **bold** as <b> and "* "/"- " list lines as bullets. No library. */
 export function mdToHtml(s: string): string {
   return s
+    .trim()
     .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, '\n\n')
     .split(/\r?\n/)
     .map((line) => {
       const bullet = /^\s*(?:[*+-]|\d+[.)])\s+/.exec(line);

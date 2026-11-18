@@ -25,6 +25,9 @@ describe('markdown in model output (F2)', () => {
     expect(h).toContain('• 12 sets grey');
     expect(h).not.toMatch(/\*|##/);
   });
+  it('drops leading/trailing blank lines and runs of blank lines', () => {
+    expect(mdToHtml('\n- a\n\n\n\n- b\n\n\n')).toBe('<div class="li">• a</div><div>&nbsp;</div><div class="li">• b</div>');
+  });
   it('escapes HTML', () => {
     expect(mdToHtml('<script>x</script>')).not.toContain('<script>');
   });
