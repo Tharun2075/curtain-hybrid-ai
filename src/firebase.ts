@@ -39,10 +39,13 @@ export interface Routing {
   source: 'remote-config' | 'default';
 }
 
+/** Remote Config fetch throttle: short so a changed limit shows up within ~30 s. */
+export const RC_MIN_FETCH_INTERVAL_MS = 30_000;
+
 export async function loadRouting(): Promise<Routing> {
   try {
     const rc = getRemoteConfig(app);
-    rc.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 10_000 : 300_000;
+    rc.settings.minimumFetchIntervalMillis = RC_MIN_FETCH_INTERVAL_MS;
     rc.defaultConfig = { ...ROUTING_DEFAULTS };
     // Never let a slow Remote Config fetch block the app: fall back to the defaults.
     await Promise.race([fetchAndActivate(rc), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))]);
@@ -92,18 +95,29 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 // ---------- on-device availability (Chrome Prompt API) ----------
 export type DeviceState = 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'no-api';
 
-export async function onDeviceState(): Promise<DeviceState> {
+/** First check waits this long; a cold Chrome start can make availability() slow. */
+export const AVAILABILITY_TIMEOUT_MS = 15_000;
+const KNOWN: DeviceState[] = ['available', 'downloadable', 'downloading', 'unavailable'];
+
+export async function onDeviceState(timeoutMs = AVAILABILITY_TIMEOUT_MS, recheckDelayMs = 0): Promise<DeviceState> {
   const LM = (globalThis as unknown as { LanguageModel?: { availability: (o?: unknown) => Promise<string> } }).LanguageModel;
   if (!LM) return 'no-api';
-  try {
-    const a = await withTimeout(LM.availability({
-      expectedInputs: [{ type: 'text', languages: ['en'] }],
-      expectedOutputs: [{ type: 'text', languages: ['en'] }],
-    }), 5000);
-    return (['available', 'downloadable', 'downloading', 'unavailable'].includes(a) ? a : 'unavailable') as DeviceState;
-  } catch {
-    return 'unavailable';
-  }
+  const check = async (): Promise<DeviceState | null> => {
+    try {
+      const a = await withTimeout(LM.availability({
+        expectedInputs: [{ type: 'text', languages: ['en'] }],
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+      }), timeoutMs);
+      return (KNOWN as string[]).includes(a) ? (a as DeviceState) : 'unavailable';
+    } catch {
+      return null; // timeout or error
+    }
+  };
+  const first = await check();
+  if (first && first !== 'unavailable') return first;
+  // One re-check before reporting "not available" (cold start can hang or lag).
+  if (recheckDelayMs > 0) await new Promise((r) => setTimeout(r, recheckDelayMs));
+  return (await check()) ?? 'unavailable';
 }
 
 // ---------- anonymous Auth + Firestore (masked text only) ----------
