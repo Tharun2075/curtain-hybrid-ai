@@ -2,10 +2,11 @@
 // Copyright 2026 Agri Group. Licensed under the Apache License, Version 2.0.
 import './styles.css';
 import { SHOP, THREADS, type Thread } from './fixtures';
-import { loadRouting, makeModels, onDeviceState, saveRun, signIn, type DeviceState, type Models, type Routing } from './firebase';
+import { AVAILABILITY_TIMEOUT_MS, loadRouting, makeModels, onDeviceState, saveRun, signIn, type DeviceState, type Models, type Routing } from './firebase';
 import { clearAllMaps, loadMap, saveMap } from './keymap';
 import { mask } from './masker';
-import { runTask, TASKS, type LedgerStep, type RunResult, type TaskId } from './pipeline';
+import { mdToHtml, parsePasted, stripMd } from './text';
+import { fmtMs, runTask, TASKS, type LedgerStep, type RunResult, type TaskId } from './pipeline';
 
 interface State {
   threads: Thread[];
@@ -65,6 +66,7 @@ function render() {
       <span class="chip"><span class="dot ${S.uid ? 'ok' : S.authError ? 'bad' : ''}"></span>Session: <b>${S.uid ? 'anonymous' : S.authError ? 'offline' : 'starting'}</b></span>
       <span class="chip">Route limit: <b>${S.routing ? S.routing.ondeviceMaxChars + ' chars' : '...'}</b>${S.routing ? ` (${S.routing.source === 'remote-config' ? 'Remote Config' : 'default'})` : ''}</span>
       <span class="chip"><span class="dot ok"></span>App Check: <b>on</b></span>
+      <span class="chip synthetic">Synthetic sample data</span>
     </div>
   </header>
   ${
@@ -131,9 +133,9 @@ function resultHtml(): string {
     ${
       r.task === 'reply'
         ? `<p class="review">Human review before sending: edit this draft, then copy it into your own mail tool.</p>
-           <textarea id="draft" aria-label="AI-generated draft reply">${esc(r.output)}</textarea>
+           <textarea id="draft" aria-label="AI-generated draft reply">${esc(stripMd(r.output))}</textarea>
            <div class="row"><button class="btn ghost" id="copy">Copy draft</button></div>`
-        : `<div class="out">${esc(r.output)}</div>`
+        : `<div class="out">${mdToHtml(r.output)}</div>`
     }
   </div>`;
 }
@@ -149,7 +151,7 @@ function ledgerHtml(): string {
   if (S.stored) items.push({ step: 'store', ranOn: 'cloud', note: S.stored });
   return `<ol>${items
     .map(
-      (l) => `<li class="${cls(l)}"><div class="where">${title[l.step]}${l.ranOn ? ': ' + l.ranOn : ''}</div>
+      (l) => `<li class="${cls(l)}"><div class="where">${title[l.step]}${l.ranOn ? ': ' + l.ranOn : ''}${l.ms != null ? `<span class="ms">${fmtMs(l.ms)}</span>` : ''}</div>
       ${l.mode ? `<div class="mode">${l.handle} · ${l.mode}</div>` : ''}<div>${esc(l.note)}</div></li>`,
     )
     .join('')}</ol>
@@ -197,7 +199,8 @@ function pasteDialog() {
     const text = (d.querySelector('textarea') as HTMLTextAreaElement).value.trim();
     if (b.dataset.add === '1' && text) {
       const id = 'pasted-' + Date.now();
-      S.threads.unshift({ id, subject: text.split('\n')[0].slice(0, 60) || 'Pasted message', channel: 'Pasted', messages: [{ from: 'Pasted', at: new Date().toISOString().slice(0, 16).replace('T', ' '), body: text }] });
+      const head = parsePasted(text);
+      S.threads.unshift({ id, subject: head.subject, channel: 'Pasted', messages: [{ from: head.from, at: new Date().toISOString().slice(0, 16).replace('T', ' '), body: text }] });
       S.current = id;
       S.result = null;
       S.stored = null;
@@ -313,7 +316,8 @@ async function boot() {
   render();
   await firstRunNotice();
   await Promise.all([
-    onDeviceState().then((d) => {
+    // F4: 15 s first check, one re-check after 10 s, so a cold start still reads "ready".
+    onDeviceState(AVAILABILITY_TIMEOUT_MS, 10_000).then((d) => {
       S.device = d;
       render();
     }),

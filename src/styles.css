@@ -90,7 +90,8 @@ h1, h2, h3 { margin: 0; font-weight: 500; }
 .result header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
 .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); }
 .tag.ai { background: var(--accent); color: var(--on-accent); }
-.result .out { white-space: pre-wrap; }
+.result .out { white-space: normal; }
+.result .out .li { padding-left: 1em; text-indent: -0.8em; }
 .result textarea { width: 100%; min-height: 180px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); resize: vertical; }
 .review { color: var(--warn); font-size: 13px; font-weight: 500; }
 .error { color: var(--error); }
@@ -101,6 +102,8 @@ h1, h2, h3 { margin: 0; font-weight: 500; }
 .ledger li.cloud { border-left-color: var(--accent); }
 .ledger li.blocked { border-left-color: var(--error); }
 .ledger .where { font-weight: 600; }
+.ledger .where .ms { font-family: var(--font-mono); font-weight: 400; color: var(--muted); margin-left: 8px; font-size: 12px; }
+.chip.synthetic { border-style: dashed; }
 .ledger .mode { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 details.received { margin-top: 12px; border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; }
 details.received summary { cursor: pointer; font-weight: 600; color: var(--accent); }

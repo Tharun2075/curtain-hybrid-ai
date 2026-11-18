@@ -28,7 +28,7 @@ All three are created in `src/firebase.ts` (`makeModels`, `src/firebase.ts:82-84
 
 Pipeline (`src/pipeline.ts`):
 
-1. **Mask.** The on-device model (when present) and the regex floor (`src/masker.ts`) mask the text.
+1. **Mask.** The on-device model (when present) and the regex floor (`src/masker.ts`) mask the text. The regex floor always runs after the on-device model too (belt and braces), so a detail the model misses (a street, a gate code, an order code) is still caught when it has a cue. Each ledger step shows its real elapsed time.
 2. **Leak check.** If any known value is still visible, the run is blocked.
 3. **Route.** The route depends on the masked prompt size. The limit is `ondevice_max_chars` from Remote Config, default 1800.
 4. **Confirm.** If masking ran without the on-device model (no Nano, or the on-device masker failed), the user must click before any model call that could reach the cloud, including the `PREFER_ON_DEVICE` route.

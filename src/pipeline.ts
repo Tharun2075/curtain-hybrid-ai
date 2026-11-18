@@ -38,6 +38,8 @@ export interface LedgerStep {
   note: string;
   /** Exact text that a model which may reach the cloud received. */
   sent?: string;
+  /** Real elapsed time of this step in milliseconds (shown in the ledger). */
+  ms?: number;
 }
 
 export interface RunResult {
@@ -67,15 +69,16 @@ export interface RunDeps {
 const MASKER_PROMPT = (text: string) =>
   'You find personal details in customer-support text so they can be hidden.\n' +
   'List every personal name, street address or place of residence, phone number, email, ' +
-  'order/ticket/tracking number, account, customer or UPI id, IBAN, link/URL, and card number that appears in the TEXT.\n' +
+  'order/ticket/tracking number, account, customer or UPI id, IBAN, link/URL, card number, and gate/door/access code that appears in the TEXT.\n' +
   'Copy each item EXACTLY as written. Ignore anything already in square brackets like [NAME_1].\n' +
-  'Answer with JSON only, no prose: {"items":[{"kind":"NAME|ADDRESS|PHONE|EMAIL|ORDER|ACCOUNT|CARD|LINK","text":"..."}]}\n\n' +
+  'Answer with JSON only, no prose: {"items":[{"kind":"NAME|ADDRESS|PHONE|EMAIL|ORDER|ACCOUNT|CARD|LINK|CODE","text":"..."}]}\n\n' +
   'TEXT:\n' +
   text;
 
 const COMMON =
   'Placeholders in square brackets such as [NAME_1], [PHONE_1], [ORDER_1] stand for hidden personal details. ' +
-  'Keep every placeholder exactly as written, never guess what it stands for, never invent new personal details.\n\n';
+  'Keep every placeholder exactly as written, never guess what it stands for, never invent new personal details. ' +
+  'Write plain text only, no markdown: no asterisks, no # headings; start list lines with "- ".\n\n';
 
 export function taskPrompt(task: TaskId, maskedThread: string): string {
   switch (task) {
@@ -123,8 +126,17 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 const sourceOf = (s?: string): 'on-device' | 'cloud' => (s === 'on_device' ? 'on-device' : 'cloud');
 
+/** Wall clock in ms; performance.now() where it exists. */
+const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/** "1.9 s" / "420 ms" for the ledger. */
+export function fmtMs(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+}
+
 export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): Promise<RunResult> {
   const ledger: LedgerStep[] = [];
+  const t0 = now();
 
   // 1. MASK. Raw text goes only to the ONLY_ON_DEVICE model; the regex floor always runs.
   let extra: Finding[] = [];
@@ -148,6 +160,7 @@ export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): P
     }
   }
   const m = mask(rawThread, extra, deps.priorMap);
+  const maskMs = now() - t0;
   const counts = countByKind(m.map);
   const countText = Object.entries(counts).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(', ') || 'nothing';
   ledger.push(
@@ -158,6 +171,7 @@ export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): P
           mode: HANDLE_MODE.masker,
           ranOn: 'on-device',
           note: `Masked on this device by the on-device model (${extra.length} hits) plus the regex floor: ${countText}.`,
+          ms: maskMs,
         }
       : {
           step: 'mask',
@@ -165,6 +179,7 @@ export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): P
           mode: HANDLE_MODE.regex,
           ranOn: 'this browser',
           note: `No on-device model: masked by the regex floor only (${countText}). It can miss names it has no cue for, so the cloud may see more.`,
+          ms: maskMs,
         },
   );
 
@@ -207,6 +222,7 @@ export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): P
   const model = handle === 'short' ? deps.models.short : deps.models.cloud;
   let text: string;
   let ranOn: 'on-device' | 'cloud';
+  const tCall = now();
   try {
     const r = await withTimeout(model.generateContent(prompt), 90_000);
     text = r.response.text();
@@ -221,6 +237,7 @@ export async function runTask(task: TaskId, rawThread: string, deps: RunDeps): P
     ranOn,
     note: ranOn === 'cloud' ? 'Answered by Gemini in the cloud. It received the masked text shown below.' : 'Answered on this device. No cloud call.',
     sent: ranOn === 'cloud' ? prompt : undefined,
+    ms: now() - tCall,
   });
 
   // 6. RESTORE in the browser from the local key map.

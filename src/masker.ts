@@ -14,9 +14,10 @@ export type Kind =
   | 'ORDER'
   | 'ACCOUNT'
   | 'CARD'
-  | 'LINK';
+  | 'LINK'
+  | 'CODE';
 
-export const KINDS: Kind[] = ['NAME', 'PHONE', 'EMAIL', 'ADDRESS', 'POSTCODE', 'ORDER', 'ACCOUNT', 'CARD', 'LINK'];
+export const KINDS: Kind[] = ['NAME', 'PHONE', 'EMAIL', 'ADDRESS', 'POSTCODE', 'ORDER', 'ACCOUNT', 'CARD', 'LINK', 'CODE'];
 
 export interface Finding {
   kind: Kind;
@@ -35,7 +36,7 @@ export interface MaskResult {
   findings: Finding[];
 }
 
-const PLACEHOLDER_RE = /\[(NAME|PHONE|EMAIL|ADDRESS|POSTCODE|ORDER|ACCOUNT|CARD|LINK)_(\d+)(?:_FIRST)?\]/g;
+const PLACEHOLDER_RE = /\[(NAME|PHONE|EMAIL|ADDRESS|POSTCODE|ORDER|ACCOUNT|CARD|LINK|CODE)_(\d+)(?:_FIRST)?\]/g;
 
 // ---------- detectors ----------
 
@@ -52,7 +53,8 @@ const CARD_LAST4_RE = /\bending(?:\s+in)?\s+(\d{4})\b/gi;
 // Order / ticket / invoice style references. Group 1 is the reference itself.
 const ORDER_LABEL_RE =
   /\b(?:order|invoice|ticket|booking|tracking|reference|ref|awb|case|return|rma|parcel|consignment)\s*(?:no\.?|number|num|#|id)?\s*[:#]?\s*((?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{3,})\b/gi;
-const ORDER_CODE_RE = /\b(?:ORD|INV|TKT|REF|BK|RMA|AWB|CS|SO|PO)[-_]?\d{3,}[A-Z0-9-]*\b/g;
+// Known prefixes, plus any short caps code with a dash and 4+ digits ("TK-50921", "LH-77310").
+const ORDER_CODE_RE = /\b(?:(?:ORD|INV|TKT|TK|REF|BK|RMA|AWB|CS|SO|PO)[-_]?\d{3,}|[A-Z]{2,4}-\d{4,})[A-Z0-9-]*\b/g;
 const HASH_NUM_RE = /#\d{4,}\b/g;
 
 // Account / customer / UPI identifiers. Group 1 is the identifier.
@@ -67,6 +69,8 @@ const PHONE_CANDIDATE_RE = /(?<![\w-])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{1,5}\)[\s.-]?
 
 const STREET_SUFFIX =
   '(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Close|Way|Nagar|Colony|Layout|Marg|Boulevard|Blvd|Court|Ct|Place|Pl|Crescent|Terrace|Gardens|Park|Main Road|Cross|Square|Sq|Row|Hill|Mews|Grove|Street East|Street West)';
+// Indian locality units after an area name ("4th Block", "2nd Stage", "Sector 15", "Phase 2").
+const AREA_UNIT = '(?:\\d{1,2}(?:st|nd|rd|th)\\s+(?:Block|Phase|Stage|Sector|Cross|Main)|(?:Block|Phase|Stage|Sector)\\s+\\d{1,3}[A-Z]?)';
 const UK_POSTCODE = '[A-Z]{1,2}\\d[A-Z\\d]? ?\\d[A-Z]{2}';
 const ADDRESS_RE = new RegExp(
   '(?:(?:Flat|Apt|Apartment|Unit|House|Door|Plot|Suite)\\s*(?:No\\.?\\s*)?[\\w/-]+,?\\s+)?' +
@@ -74,11 +78,14 @@ const ADDRESS_RE = new RegExp(
     "(?:[A-Z][A-Za-z']+\\.?\\s+){1,4}" +
     STREET_SUFFIX +
     '\\b\\.?' +
-    "(?:,\\s*[A-Z][A-Za-z']+(?:\\s[A-Z][A-Za-z']+){0,2}){0,3}" +
+    // Locality tail: ", Jayanagar 4th Block", ", HSR Layout Sector 2", ", Bengaluru".
+    "(?:,\\s*(?:" + AREA_UNIT + "|[A-Z][A-Za-z']+(?:\\s(?:[A-Z][A-Za-z']+|" + AREA_UNIT + ")){0,3})){0,4}" +
     '(?:,?\\s*(?:\\d{3}\\s?\\d{3}|' + UK_POSTCODE + '|[A-Z]{2}\\s\\d{5}(?:-\\d{4})?))?',
   'g',
 );
 const POSTCODE_RE = new RegExp('\\b' + UK_POSTCODE + '\\b', 'g');
+// Door, gate and access codes ("gate code 4471", "door code is 2580").
+const ACCESS_CODE_RE = /\b(?:gate|door|access|entry|pin|lock|alarm|building|security)\s+code\s*(?:is\s+|:\s*|#\s*)?(\d{3,6})\b/gi;
 const PIN_LABEL_RE = /\b(?:pin(?:\s*code)?|pincode|postcode|zip(?:\s*code)?)\s*[:#]?\s*(\d{3}\s?\d{3}|\d{5}(?:-\d{4})?)/gi;
 
 const NAME_WORD = "[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?";
@@ -235,6 +242,7 @@ export function detect(text: string): Finding[] {
   }
   for (const m of matches(POSTCODE_RE, text)) add('POSTCODE', m.value, m.start, m.end);
   for (const m of matches(PIN_LABEL_RE, text, 1)) add('POSTCODE', m.value, m.start, m.end);
+  for (const m of matches(ACCESS_CODE_RE, text, 1)) add('CODE', m.value, m.start, m.end);
 
   // Names: find by context, then mask every occurrence of each name string.
   // A shouted thread ("MR. DANIEL MENSAH") is read as Title Case, once more with the lowercase
@@ -250,7 +258,7 @@ export function detect(text: string): Finding[] {
 }
 
 const KIND_PRIORITY: Record<Kind, number> = {
-  LINK: 0, EMAIL: 0, CARD: 1, ACCOUNT: 2, ORDER: 3, ADDRESS: 4, PHONE: 5, POSTCODE: 6, NAME: 7,
+  LINK: 0, EMAIL: 0, CARD: 1, ACCOUNT: 2, ORDER: 3, ADDRESS: 4, PHONE: 5, POSTCODE: 6, CODE: 6, NAME: 7,
 };
 
 /** Pick non-overlapping findings: earliest first, then longest, then kind priority. */
