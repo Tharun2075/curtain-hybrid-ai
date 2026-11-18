@@ -10,7 +10,7 @@ Built with Firebase AI Logic hybrid inference (web), for the Build with Hybrid A
 
 ## Why it matters (value proposition)
 
-Small-shop support staff paste customer messages into AI tools all day, and every paste carries a name, a phone number, an order number or a home address to a cloud model. Curtain splits the work between two Gemini models: Gemini Nano in Chrome sees the raw text and masks the personal details on the device; cloud Gemini only ever sees the masked text and does the heavy writing. The answer comes back with the real details put back in the browser. Staff keep the speed of cloud AI without handing customers' personal data to it, and a route ledger shows, run by run, exactly what went where.
+Small-shop support staff paste customer messages into AI tools all day, and every paste carries a name, a phone number, an order number or a home address to a cloud model. Curtain splits the work between two Gemini models: Gemini Nano in Chrome sees the raw text and masks the personal details on the device; cloud Gemini only ever sees the masked text and does the heavy writing. The answer comes back with the real details put back in the browser. Staff keep the speed of cloud AI while names, numbers and addresses are masked before any cloud prompt is built, and a route ledger shows, run by run, exactly what went where.
 
 ## What it does
 
