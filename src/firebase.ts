@@ -15,7 +15,7 @@ const RECAPTCHA_ENTERPRISE_SITE_KEY = '6LfMaCYuAAAAAED4Zrakdy9ASXCfP3l2uB_n_zM2'
 // Local development only: the App Check debug token comes from .env.local
 // (git-ignored). It is never committed and never bundled into a production build.
 if (import.meta.env.DEV && import.meta.env.VITE_APPCHECK_DEBUG_TOKEN) {
-  (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+  (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
     import.meta.env.VITE_APPCHECK_DEBUG_TOKEN;
 }
 
