@@ -4,7 +4,13 @@ Curtain is a support-inbox helper. Personal details in a customer thread are mas
 
 Built with Firebase AI Logic hybrid inference (web), for the Build with Hybrid AI (Firebase) 2026 contest. Licence: Apache-2.0. Entrant: Agri Group.
 
-**Try it:** preview URL https://curtain-agrigroup--agrigroup-preview-mq1l83wq.web.app (Firebase Hosting preview channel, expires 2026-12-18; the live URL <HOSTING_URL> is published at submission).
+**Try it:** https://curtain-agrigroup.web.app (Firebase Hosting, free of charge, no login). Best in desktop Google Chrome 138 or newer with Gemini Nano (see "Testing" below); any other browser still works on the cloud fallback.
+
+**Firebase AI Logic is imported and called at runtime:** `firebase/ai` is imported in `src/firebase.ts`, and every task the app runs calls `generateContent` on its hybrid model handles in `src/pipeline.ts`.
+
+## Why it matters (value proposition)
+
+Small-shop support staff paste customer messages into AI tools all day, and every paste carries a name, a phone number, an order number or a home address to a cloud model. Curtain splits the work between two Gemini models: Gemini Nano in Chrome sees the raw text and masks the personal details on the device; cloud Gemini only ever sees the masked text and does the heavy writing. The answer comes back with the real details put back in the browser. Staff keep the speed of cloud AI without handing customers' personal data to it, and a route ledger shows, run by run, exactly what went where.
 
 ## What it does
 
@@ -18,7 +24,7 @@ Built with Firebase AI Logic hybrid inference (web), for the Build with Hybrid A
 
 ## The three Firebase AI Logic model handles
 
-All three are created in `src/firebase.ts` (`makeModels`, `src/firebase.ts:82-84`) and called in `src/pipeline.ts` (`runTask`: masker at `src/pipeline.ts:134`, short/cloud at `src/pipeline.ts:211`). The SDK import is `src/firebase.ts:9`.
+All three are created in `src/firebase.ts` (`makeModels`, `src/firebase.ts:85-87`) and called in `src/pipeline.ts` (`runTask`: masker at `src/pipeline.ts:146`, short/cloud at `src/pipeline.ts:227`). The SDK import is `src/firebase.ts:9`.
 
 | Handle | Mode | Gets | Used for |
 |---|---|---|---|
@@ -55,7 +61,7 @@ On-device inference needs Chrome with the Prompt API (Gemini Nano) enabled. With
 
 ## Testing App Check (for reviewers)
 
-- **Hosted app:** a normal desktop Chrome passes App Check (reCAPTCHA Enterprise) on its own. Open the preview or hosting URL and run a task; no token is needed.
+- **Hosted app:** a normal desktop Chrome passes App Check (reCAPTCHA Enterprise) on its own. Open https://curtain-agrigroup.web.app and run a task; no token is needed.
 - **Local run or a headless/automated browser:** App Check blocks the cloud call unless the browser is registered with a debug token.
   1. In the Firebase console, open the project, then App Check > Apps > the web app > menu > Manage debug tokens > Add debug token. Copy the token (it is a secret: do not paste it into issues, screenshots or commits).
   2. `cp .env.example .env.local` and set `VITE_APPCHECK_DEBUG_TOKEN` to that token. `.env.local` is git-ignored.
@@ -87,8 +93,16 @@ I searched GitHub code for `InferenceMode.ONLY_ON_DEVICE`, searched repos for "f
 
 The masker (`src/masker.ts`) was therefore written from scratch. It also masks UPI ids and other `name@handle` ids, IBAN-like ids, links and partial card numbers, and never masks the shop's own name or titles such as "Mr.".
 
+## Testing (for judges)
+
+1. Open https://curtain-agrigroup.web.app in desktop Google Chrome 138 or newer.
+2. For the on-device path, Chrome needs Gemini Nano: enable `chrome://flags/#prompt-api-for-gemini-nano` and `chrome://flags/#optimization-guide-on-device-model`, restart, then check `chrome://on-device-internals` shows the model as ready (the first run downloads it, about 4 GB).
+3. Pick a sample thread, choose a task (Summarise, Extract fields or Draft reply) and run it. The route ledger shows which model ran, its inference mode and whether it ran on the device or in the cloud; "What the cloud received" shows the masked text.
+4. Without Gemini Nano (other browsers, or Nano not downloaded) a banner says so, masking uses the regex floor only, and a dialog shows the exact outgoing text before any cloud call.
+
+All sample data is synthetic.
+
 ## Status
 
-- Hosting: site `curtain-agrigroup` (see `firebase.json`); only a preview channel is deployed, nothing is live yet. Firestore rules are not deployed, so saving runs fails with "permission denied" until `firebase deploy --only firestore:rules` is run. The app keeps working and notes this in the ledger.
-- The Remote Config parameters are not created in the console, so the defaults are used.
-- The brand lock is a proposal (`brand/BRAND.lock.proposed`) until it is initialised.
+- Hosting: live at https://curtain-agrigroup.web.app (site `curtain-agrigroup`, see `firebase.json`).
+- Firestore rules (`firestore.rules`) and the Remote Config template (`remoteconfig.template.json`) are deployed.
