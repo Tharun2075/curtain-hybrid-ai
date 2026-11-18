@@ -3,6 +3,8 @@
 // (from the ONLY_ON_DEVICE model) are merged in through `mask(text, extra)`.
 // Copyright 2026 Agri Group. Licensed under the Apache License, Version 2.0.
 
+import { SHOP_TERMS } from './fixtures';
+
 export type Kind =
   | 'NAME'
   | 'PHONE'
@@ -95,6 +97,9 @@ const NAME_CONTEXT_RES: RegExp[] = [
   new RegExp(`\\b(?:husband|wife|son|daughter|mother|father|neighbour|neighbor|partner|colleague)\\s+(${FULL_NAME})`, 'g'),
 ];
 
+// Cue words written in lowercase inside NAME_CONTEXT_RES ("my name is", "spoke to", "wife").
+const LOWER_CUES = new Set(['name', 'is', 'this', 'am', 'speaking', 'with', 'spoke', 'to', 'husband', 'wife', 'son', 'daughter', 'mother', 'father', 'neighbour', 'neighbor', 'partner', 'colleague']);
+
 // Words that look like names after a greeting or "I am" but are not.
 const NAME_STOP = new Set(
   [
@@ -123,6 +128,9 @@ export function addKeepTerms(terms: string[]): void {
   for (const t of terms) for (const w of t.split(/[^A-Za-z']+/)) if (w.length >= 2) KEEP.add(w.toLowerCase());
 }
 const isKept = (w: string) => NAME_STOP.has(w.toLowerCase()) || KEEP.has(w.toLowerCase());
+// The masker owns its keep-list: the shop's own words load with the masker, never through
+// an import side effect elsewhere, so every caller of mask()/leakCheck keeps them.
+addKeepTerms(SHOP_TERMS);
 
 function luhnOk(digits: string): boolean {
   let sum = 0;
@@ -229,8 +237,14 @@ export function detect(text: string): Finding[] {
   for (const m of matches(PIN_LABEL_RE, text, 1)) add('POSTCODE', m.value, m.start, m.end);
 
   // Names: find by context, then mask every occurrence of each name string.
-  for (const name of detectNameStrings(text)) {
-    for (const o of occurrences(text, name)) add('NAME', name, o.start, o.end);
+  // A shouted thread ("MR. DANIEL MENSAH") is read as Title Case, once more with the lowercase
+  // cue words ("MY NAME IS") lowered; same length, so offsets hold.
+  const cased = text.replace(/\b[A-Z]{2,}(?:[-'][A-Z]+)?\b/g, (w) => w[0] + w.slice(1).toLowerCase());
+  const cued = cased.replace(/\b[A-Z][a-z]+\b/g, (w, at: number) => (/[A-Z]{2}/.test(text.slice(at, at + w.length)) && LOWER_CUES.has(w.toLowerCase()) ? w.toLowerCase() : w));
+  for (const read of text === cased ? [text] : [cased, cued]) {
+    for (const name of detectNameStrings(read)) {
+      for (const o of occurrences(read, name)) add('NAME', text.slice(o.start, o.end), o.start, o.end);
+    }
   }
   return f;
 }

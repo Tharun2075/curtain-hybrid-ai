@@ -15,12 +15,9 @@ export interface Thread {
   messages: Message[];
 }
 
-import { addKeepTerms } from './masker';
-
 export const SHOP = 'Loomhouse Linens (sample shop)';
 /** The shop's own name is never a customer's personal detail. */
 export const SHOP_TERMS = ['Loomhouse Linens', 'Loomhouse'];
-addKeepTerms(SHOP_TERMS);
 
 export const THREADS: Thread[] = [
   {
