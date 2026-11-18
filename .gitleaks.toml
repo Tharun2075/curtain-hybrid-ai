@@ -1,0 +1,13 @@
+# Gitleaks config. Default rules, plus an allowlist for values that are PUBLIC by design:
+# the Firebase web API key (shipped to every browser, guarded by App Check and Firestore rules)
+# and the reCAPTCHA Enterprise SITE key (guarded by its allowed-domains list).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public Firebase web config and reCAPTCHA site key"
+regexTarget = "match"
+regexes = [
+  '''AIzaSyBlTyoLfy4L-6bm8TdL3fbBzLtHrTTzG2o''',
+  '''6LfMaCYuAAAAAED4Zrakdy9ASXCfP3l2uB_n_zM2''',
+]

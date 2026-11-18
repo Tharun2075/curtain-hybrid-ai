@@ -1,0 +1,8 @@
+Curtain
+Copyright 2026 Agri Group
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product depends on the Firebase JavaScript SDK
+(https://github.com/firebase/firebase-js-sdk), Copyright Google LLC,
+licensed under the Apache License, Version 2.0.

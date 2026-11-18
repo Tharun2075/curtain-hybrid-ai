@@ -1,0 +1,45 @@
+{
+  "app": "curtain",
+  "kind": "SELL",
+  "status": "pending-owner-pick",
+  "version": 1,
+  "approved_by": "",
+  "approved_at": "",
+  "method_run": "light run by builder on 5x-1 2026-11-18: grid search over HLS for max min-dE00 vs all LANES accents/highlights; accent #1B216A nearest sibling dE00 13.5, highlight #EDFB56 nearest dE00 13.8; contrast pairs checked with brand/tools/colorcheck.py; no competitor CSS fetch or glance test yet",
+  "lane": {
+    "accent": "midnight indigo H299 #1B216A",
+    "highlight": "signal lime #EDFB56 (masked-placeholder chips)"
+  },
+  "light": {
+    "bg": "#F7F5EF",
+    "surface": "#FFFDF8",
+    "ink": "#14120F",
+    "muted": "#6B645A",
+    "line": "#8C8478",
+    "accent": "#1B216A",
+    "tint": "#E6E7F2",
+    "highlight": "#EDFB56",
+    "success": "#1F6B3A",
+    "warn": "#8A5A00",
+    "error": "#A32222"
+  },
+  "dark": {
+    "bg": "#13110E",
+    "surface": "#1C1915",
+    "ink": "#F7F5EF",
+    "muted": "#A8A196",
+    "line": "#706A60",
+    "accent": "#B4BAFF",
+    "tint": "#22254A",
+    "highlight": "#EDFB56",
+    "success": "#6FCF97",
+    "warn": "#E0B04A",
+    "error": "#F08A8A"
+  },
+  "chart": ["#1B216A", "#1F6B3A", "#8A5A00", "#A32222", "#6B645A"],
+  "type": {"display": "Instrument Serif", "body": "Geist", "mono": "Geist Mono"},
+  "motion": {},
+  "print": {},
+  "allow_external": [],
+  "tolerance_de00": 1.0
+}

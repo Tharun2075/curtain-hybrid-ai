@@ -1,0 +1,14 @@
+{
+  "parameters": {
+    "ondevice_max_chars": {
+      "defaultValue": { "value": "1800" },
+      "valueType": "NUMBER",
+      "description": "Max masked-prompt characters routed to the on-device model; longer goes to cloud."
+    },
+    "cloud_model": {
+      "defaultValue": { "value": "gemini-3.5-flash-lite" },
+      "valueType": "STRING",
+      "description": "Cloud Gemini model handle."
+    }
+  }
+}

@@ -1,0 +1,18 @@
+rules_version = '2';
+// Curtain: each anonymous user can create and read only their own runs.
+// Runs hold MASKED text only; the restore key map never leaves the browser's IndexedDB.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/runs/{runId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['task', 'threadId', 'maskedInput', 'maskedOutput', 'route', 'maskCount', 'createdAt'])
+        && request.resource.data.maskedInput is string && request.resource.data.maskedInput.size() < 20000
+        && request.resource.data.maskedOutput is string && request.resource.data.maskedOutput.size() < 20000;
+      allow update, delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

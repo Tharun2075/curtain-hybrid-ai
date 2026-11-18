@@ -1,0 +1,25 @@
+{
+  "name": "curtain",
+  "version": "1.0.0",
+  "description": "Curtain: on-device masking in front of cloud AI for support inboxes (Firebase AI Logic hybrid)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-curtain 'node tests/rules/rules.check.mjs'"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "firebase": "^13.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "fake-indexeddb": "^6.2.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "private": true
+}
